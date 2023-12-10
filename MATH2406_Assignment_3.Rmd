@@ -1,0 +1,366 @@
+---
+title: "Practical Data Analysis Project"
+subtitle: "Assessment 3"
+author: "Aliia Gismatullina s4051304"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+editor_options: 
+  markdown: 
+    wrap: 60
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE
+)
+
+library(devtools)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(readr)    
+library(here) 
+library(ggridges)
+library(MatchIt)
+library(GGally)
+library(fmsb)
+
+```
+# Introduction
+Why Not Watch? is committed to improving user engagement and increasing the average hours watched per user per day, a key metric for ad pricing. 
+
+In pursuit of this, we recently introduced a new recommendation engine.
+
+The current analysis serves to answer a crucial question: 
+Does the new recommendation engine significantly impact user engagement? 
+
+The insights gained from this evaluation will empower us to make a decision about the widespread implementation of the new recommendation algorithm.
+
+# Data clarification and summary
+```{r}
+# Loading the dataset
+file_name <- "streaming_data.csv"
+df <- read_csv(here(file_name))
+
+# Exploring the dataset
+str(df)
+summary(df)
+```
+
+
+# Bias Assessment
+
+```{r}
+# Checking for missing data
+missing_data <- df %>%
+  summarise_all(~sum(is.na(.)))
+print(missing_data)
+```
+As we can see, there is no missing data that might affect the analysis, so we can continue further.
+
+
+## Demographic distribution
+### Gender distribution in A/B groups
+```{r}
+# Examining  the distribution of demographic factors and identifying any imbalances between the control group (Group A) and the treated group (Group B)
+
+gender_distribution <- df %>%
+  group_by(group, gender) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = gender, y = count, fill = group)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution of Gender in both Groups",
+       x = "Gender",
+       y = "Count") +
+  scale_fill_manual(values = c("A" = "#ADD8E6", "B" = "#FE70D6"))
+
+print(gender_distribution)
+
+
+```
+In the bar chart displayed above, it's evident that males hold sway in both the control group (A) and the treated group (B). However, in Group B we can see that there is almost twice as more males than females, whereas in Group A the difference is present, but not so meaningful. To make a precise conclusion, I performed a Pearson's Chi-squared test.
+
+```{r}
+gender_table <- table(df$group, df$gender)
+chisq_test_gender <- chisq.test(gender_table)
+print(chisq_test_gender)
+```
+The chi-squared test showed a p-value of 1.549e-05 (very close to 0), reconfirming the significance. In practical terms, it means that the proportion of males and females in the two groups is not equal.
+
+
+
+### Age distribution  in A/B groups
+```{r}
+age_distribution <- df %>%
+  ggplot(aes(x = group, y = age, fill = group)) +
+  geom_boxplot() +
+  labs(title = "Age Distribution by Groups",
+       x = "Group",
+       y = "Age") +
+  scale_fill_manual(values = c("A" = "#ADD8E6", "B" = "#FE70D6"))
+
+print(age_distribution)
+```
+The box plot above does show some difference in age distribution in both groups. 
+To be more precise, it makes sense to perform a t-test.
+
+```{r}
+t_test_age <- t.test(df$age ~ df$group)
+print(t_test_age)
+```
+According to the t-test results, there is difference between Group A and Group B. We can see a p-value of 0.005443, which is less than 0.05, indicating significance. At the same time, the mean age for Group B (38.94) is higher than for Group A (36.15). And lastly, the 95% confidence interval is between -4.75 and -0.84, confirming the difference.
+
+
+### Social metrics distribution in A/B groups
+```{r}
+social_metric_distribution <- df %>%
+  ggplot(aes(x = social_metric, fill = group)) +
+  geom_histogram(binwidth = 1, position = "dodge") +
+  labs(title = "Distribution of Social Metric by Groups",
+       x = "Social Metric",
+       y = "Count") +
+  scale_fill_manual(values = c("A" = "#ADD8E6", "B" = "#FE70D6"))
+
+print(social_metric_distribution)
+```
+Social metrics are also distributed similarly in both groups. Let's perform a t-test to make it clear:
+
+```{r}
+t_test_social_metric <- t.test(df$social_metric ~ df$group)
+print(t_test_social_metric)
+```
+The t-test showed a p-value of 0.2041, which is higher than the common significance level of 0.05. This indicates that there is no statistically significant difference. The 95% confidence interval for the difference in means ranges from approximately -0.91 to 0.20, further supporting the absence of a significant difference.
+
+
+### "Time since Signup" distribution  in A/B groups
+```{r}
+time_since_signup_distribution <- df %>%
+  ggplot(aes(x = time_since_signup, color = group)) +
+  geom_density(alpha = 0.7) +
+  labs(title = "Time Since Signup Distribution by Groups",
+       x = "Time Since Signup",
+       y = "Density") +
+  scale_color_manual(values = c("A" = "#ADD8E6", "B" = "#FE70D6"))
+
+print(time_since_signup_distribution)
+```
+Similar situation in the current plot as well. Here is the t-test to confirm it:
+
+```{r}
+t_test_time_since_signup <- t.test(df$time_since_signup ~ df$group)
+print(t_test_time_since_signup)
+```
+Very similar situation with the "time since signup" as well. The p-value is 0.4297 (greater than 0.05); the 95% confidence interval for the difference in means ranges from approximately -0.84 to 1.96, confirming the absence of a major difference.
+
+# Identified Errors
+These findings suggest that age and gender show significant differences between the A/B groups, which can impact the results of the A/B test. Social metric and time since signup, on the other hand, do not show major differences between the two groups.
+
+
+## Stratification
+To address the bias and enhance our analysis validity, I performed a stratification method for Age and Gender variables.
+
+## Age
+```{r}
+# Separating the age into subgroups
+age_ranges <- c(17, 25, 35, 45, 55)
+
+group_labels <- c("18-25", "26-35", "36-45", "46-55")
+df$age_groups <- cut(df$age, breaks = age_ranges, labels = group_labels)
+
+head(df)
+
+```
+```{r}
+# Average hours watched per user per day for each age group, considering A/B groups
+metrics <- df %>%
+  group_by(age_groups, group) %>%
+  summarize(
+    mean_hours_watched = mean(hours_watched)
+  )
+
+print(metrics)
+```
+
+```{r}
+ggplot(metrics, aes(x = age_groups, y = mean_hours_watched, fill = group)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+  labs(title = "Average Hours Watched by Age Groups",
+       x = "Age Groups", y = "Average Hours Watched") +
+  scale_fill_manual(values = c("A" = "lightblue", "B" = "#FE70D6"))
+
+```
+Overall, the data and visualization suggests that, within each age group, group B tends to have a higher average hours watched compared to group A. This confirms that the recommendation engine change may have worked towards increased user engagement in all the age groups. 
+
+## Gender
+
+To gain meaningful insights from Gender data, I will use stratification method again, based on the Gender variable, and conduct a t-tests within each gender group to compare the mean hours watched between groups A and B. 
+```{r}
+gender_strata <- df %>%
+  group_by(gender) %>%
+  do({
+    t_test_result <- t.test(hours_watched ~ group, data = .)
+    data.frame(gender = unique(.$gender), 
+               p_value = t_test_result$p.value,
+               mean_difference = diff(t_test_result$estimate))
+  })
+
+print(gender_strata)
+```
+These results show that the recommendation engine change had some good impact on user engagement for both male and female users. However, there appears to be a slightly greater increase in user engagement for the Females compared to the Males in Group B. Visualization will help us see a better picture.
+
+```{r}
+ggplot(df, aes(x = group, y = hours_watched, fill = gender)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Hours Watched by Gender and Group",
+       x = "Group",
+       y = "Hours Watched") +
+  scale_fill_manual(values = c("purple", "#00CB00")) +
+  theme_minimal()
+```
+Reviewing the box plot reveals that the new recommendation engine produces more promising results for the female users, as evidenced by the distribution of hours watched. This demonstrates the potential effectiveness of the updated engine in raising user engagement among female audience.
+
+Now we can move on to the rest of the metrics and analyse the impact of the new recommendation engine on each of them.
+
+
+# Comprehensive Investigation of Key Metrics and their relationship with the New Recommendation Engine
+## Social Metric
+
+Let's perform a linear regression analysis for an in-depth investigation: whether the Social metric affected "Hours Watched" in A/B groups.
+```{r}
+# Creating and performing linear regression analysis for each group
+model_group_A_social <- lm(hours_watched ~ social_metric, data = subset(df, group == "A"))
+model_group_B_social <- lm(hours_watched ~ social_metric, data = subset(df, group == "B"))
+
+summary(model_group_A_social)
+summary(model_group_B_social)
+```
+Group A:
+
+- p-value for the"social_metric" is 1.386e-10, confirms relationship between "social metric" and "hours watched" for group A. 
+- multiple R-squared value is 0.04585, indicates that 4.6% of the variance in "hours watched" can be explained by "social metric" for this group.
+
+Group B:
+
+- p-value for the "social_metric" is 6.654e-05, suggests a relationship between "social metric" and "hours watched" for group B.
+- multiple R-squared value if 0.1266, indicates that 12.7% of the variance in "hours watched" can be explained by "social metric" for this group.
+
+```{r}
+# Creating a scatter plot with regression line for group A
+ggplot(subset(df, group == "A"), aes(x = social_metric, y = hours_watched)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Relationship between Social Metric and Hours Watched (Group A)",
+       x = "Social Metric",
+       y = "Hours Watched") +
+  theme_minimal()
+
+# Creating a scatter plot with regression line for group B
+ggplot(subset(df, group == "B"), aes(x = social_metric, y = hours_watched)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relationship between Social Metric and Hours Watched (Group B)",
+       x = "Social Metric",
+       y = "Hours Watched") +
+  theme_minimal()
+```
+Based on the results of the regression analysis and the visualization, we can conclude that the new recommendation engine (group B) had a reasonable effect on the "hours watched" metric considering the "social metric" variable.
+
+In comparison to group A (the control group), group B (the treatment group) has a more pronounced regression line in the visualization. This implies that the modifications made to the new recommendation engine may have boosted user participation in Social Metrics.
+
+
+
+## Time Since Signup 
+
+Next, I performed a linear regression analysis to see if "Time Since Signup" metric impacted "Hours Watched" in A/B groups.
+
+```{r}
+# Creating a plot to visualize the relationship between two variables 
+ggplot(df, aes(x = time_since_signup, y = hours_watched, color = group)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point() +
+  labs(title = "Relationship between 'Time Since Signup' and 'Hours Watched'",
+       x = "Time Since Signup",
+       y = "Hours Watched",
+       color = "Group") +
+  theme_minimal()
+```
+
+```{r}
+# Creating and performing linear regression analysis for each group
+model_group_A <- lm(hours_watched ~ time_since_signup, data = subset(df, group == "A"))
+model_group_B <- lm(hours_watched ~ time_since_signup, data = subset(df, group == "B"))
+
+summary(model_group_A)
+summary(model_group_B)
+```
+Group A:
+
+- p-value for the "time_since_signup" is 0.845, indicating that the relationship between "Time since signup" and "Hours watched" is not significant.
+- multiple R-squared value is 0.000044.
+
+Group B:
+
+- p-value for the "time_since_signup" is 0.789, indicating no significant relationship between "Time since signup" and "Hours watched."
+- multiple R-squared value is 0.000607, indicates that "time since signup" explains only a small fraction if the variation in "hours watched" for Group B.
+
+According to these results, the duration of a user's subscription ("time since signup") does not seem to be a strong indicator of the amount of content consumed ("hours watched") for either group. 
+
+
+## Age, Gender and Social Metric 
+For the bigger picture, let's conduct a multiple regression analysis considering the impact of multiple independent variables: age, gender and social metric. 
+```{r}
+# Multiple regression analysis
+multiple_model <- lm(hours_watched ~ gender + age_groups + social_metric + group, data = df)
+
+summary(multiple_model)
+
+```
+The model provides the following insights as a result of the outcomes of the multiple regression analysis:
+
+1) Gender: the data confirms that gender does not appear to have a crucial impact on the hours watched indicator, suggesting that platform usage by male (p-value of 0.733) and female users is comparable. While it's possible that gender doesn't directly affect engagement, it's still important to make sure that the content and suggestions take into account the varied interests of all users.
+
+2) Age: when compared to the reference group (18-25), the age groups of 26-35, 36-45, and 46-55 show significant negative relationships with the hours watched metric, indicating that users in these age brackets may use the platform for less hours. This result emphasizes how crucial it is to comprehend age-related preferences and adjust material and recommendations accordingly.
+
+3) Social Metric: is also significant (p-value < 0.05), indicating that, as the social metric grows, the hours watched metric also grows, holding other factors constant.
+
+4) Group Effect: the coefficient for the Group B variable is roughly 0.63, showing that the new recommendation engine (group B) caused a rise in viewing time compared to the control group A. Because of the statistical significance of this finding (p<0.05), it can be concluded that the new recommendation engine significantly affects user engagement.
+
+The multiple R-squared value of 0.38 indicates that the combined effects of gender, age groups, and social measure can account for about 38% of the variance in the hours watched metric. 
+
+These findings highlight the crucial role that personalized content recommendations, user preferences, and efficient algorithmic implementations play an important role in increasing user engagement and raising the hours watched statistic, which in turn helps to improve the platform's overall effectiveness, user satisfaction and company profit. 
+```{r}
+coefficients <- c(4.82343, 0.02324, -0.48546, -1.32179, -2.01081, 0.09632, 0.62883)
+factors <- c("Intercept", "Gender", "Age Group 26-35", "Age Group 36-45", "Age Group 46-55", "Social Metric", "Group B")
+barplot(coefficients, names.arg = factors, main = "Impact of Different Factors on Hours Watched",
+        xlab = "Factors", ylab = "Coefficient Estimate", col = "#FE70D6", ylim = c(-2.5, 5))
+```
+
+# Discussion
+### Strengths and Limitations of the investigation
+#### Strengths: 
+- Thorough examination of numerous demographic aspects (age, gender, social metric, time since signup)
+- A clear demonstration of how the new recommendation engine affects user engagement 
+- Thorough statistical techniques. 
+
+#### Limitations:
+- Because the analysis was focused on a limited time period, it might not have captured long-term patterns.
+- External variables or user preferences that can impact participation were not taken into account in the study.
+- It is possible that some complicating variables were not taken into account.
+
+#### Future Directions:
+- Long-term Analysis: a longitudinal study should be conducted to monitor user involvement over a longer length of time while taking seasonal variations and user habits into account.
+- Qualitative Research: surveys and interviews should be conducted to learn more about user preferences and specific factors, that influence their engagement.
+- Feature Analysis: a separate investigation can take place, to find out what specific features and content boosts user engagement.
+
+### Conclusion 
+The analysis demonstrated that the implementation of the new recommendation engine greatly enhanced user engagement, as seen by the number of hours watched on average. Age and social metrics were key demographic determinants, but gender had little impact on the new recommendation engine's success. It is essential to continuously monitor and adjust to user preferences in order to improve user engagement.
+
+The key takeaway is that a data-driven strategy, taking into account all the demographic aspects, can offer insightful data on the success of new product implementations and support the development of future business plans.
+
