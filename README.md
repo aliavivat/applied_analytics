@@ -2,6 +2,8 @@
 
 Practical Data Analysis Project
 
+"Analysis Report of the New Recommendation Engine Impact on User Engagement"
+
 Applied Analytics course Assignment
 
 Assessment type: Slide presentation (narrated) + Length limits (+/- 10%): elevator pitch video + R Markdown code (as a PDF).
