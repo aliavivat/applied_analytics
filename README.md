@@ -41,12 +41,15 @@ The executives at WNW want to know if the new recommendation engine algorithm is
 The sample data
 
 The executives are also interested in any other insights you may learn from the sample data (available to download on the Assessment 3 page in Canvas). In particular, they are curious about the following:
+
 • Is there any bias in the data collection?
 • How could any bias be corrected?
 • What improvements could be made to future A/B tests?
+
 The sample data shows the effect of an A/B test conducted to measure the effectiveness of a change to the recommendation engine used on some subscribers, but not others. The change to the recommendation went live at 1-minute past midnight on the 18th of July.
 Those customers who were unknowingly using the new recommendation engine to suggest what to watch next are labelled as group B, while group A was used as a control group.
 The data set has the following fields:
+
 • date in format dd/mm
 • gender of the customer
 • age of the customer
