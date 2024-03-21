@@ -1,6 +1,6 @@
 ---
 title: "Practical Data Analysis Project"
-subtitle: "Assessment 3"
+subtitle: ""
 author: ""
 output:
   html_document:
