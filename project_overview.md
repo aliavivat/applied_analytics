@@ -1,17 +1,15 @@
-# applied_analytics
+## applied_analytics
 
-Practical Data Analysis Project
+# Practical Data Analysis Project
 
 "Analysis Report of the New Recommendation Engine Impact on User Engagement"
 
-Applied Analytics course Assignment
-
-Assessment type: Slide presentation (narrated) + Length limits (+/- 10%): elevator pitch video + R Markdown code (as a PDF).
+Project type: Slide presentation (narrated) + Length limits (+/- 10%): elevator pitch video + R Markdown code (as a PDF).
 
 
-Overview
+## Overview
 
-This assessment requires you to read a business case and use sample data to create the following:
+This project requires you to read a business case and use sample data to create the following:
 
 • Slide deck presentation
 
@@ -20,10 +18,10 @@ This assessment requires you to read a business case and use sample data to crea
 • R markdown code.
 
 
-Course learning outcomes
+## Course learning outcomes
 
 
-This assessment is relevant to the following course learning outcomes:
+This project is relevant to the following course learning outcomes:
 
 
 • Perform data pre-processing steps.
@@ -36,27 +34,27 @@ This assessment is relevant to the following course learning outcomes:
 
 
 
-Assessment details
+## Project details
 
 
-Context
+### Context
 
 
 The world has entered a new age of increasingly frequent and intense periods of turbulence. We cannot help but watch events unfold in real time as we try our best to gauge the shockwaves that will impact the global economy. Some sectors and organisations have been devastated (tourism) but others have flourished. Within the video streaming services, this could not be any truer.
 Not so long ago, streaming services disrupted the entertainment industry. Now these digital disruptors are being disrupted themselves. Competition between the streaming titans is heating up and the competition for user engagement through increasingly well targeted content has never been higher. An increase in user engagement means more hours of streaming and plenty of opportunities for advertising revenue and therefore company profit.
 
 
-Business case
+### Business case
 
 
 Streaming company Why Not Watch? (WNW) has built up a healthy customer base with good content offerings but is continually refining their recommendation engine to provide better recommendations to customers. Better recommendations improve user engagement and importantly increase the average hours watched per user per day, a key metric used to price ads for 3rd party marketing companies.
 The executives at WNW want to know if the new recommendation engine algorithm is worth rolling out to all their subscribers. They have asked you to analyse the results from a recent change they made in their recommendation engine and present the results to the executive team.
 
 
-The sample data
+### The sample data
 
 
-The executives are also interested in any other insights you may learn from the sample data (available to download on the Assessment 3 page in Canvas). In particular, they are curious about the following:
+The executives are also interested in any other insights you may learn from the sample data (available to download on the project 3 page in Canvas). In particular, they are curious about the following:
 
 
 • Is there any bias in the data collection?
