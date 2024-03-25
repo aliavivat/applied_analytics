@@ -1,5 +1,3 @@
-## applied_analytics
-
 # Practical Data Analysis Project
 
 "Analysis Report of the New Recommendation Engine Impact on User Engagement"
